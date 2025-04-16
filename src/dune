@@ -1,0 +1,4 @@
+(library
+ (name rocq_ltac2_judgement_plugin)
+ (public_name rocq-ltac2-judgement.plugin)
+ (libraries rocq-runtime.vernac rocq-runtime.plugins.ltac2))
