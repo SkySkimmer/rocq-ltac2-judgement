@@ -1,0 +1,4 @@
+(coq.theory
+ (name Ltac2JudgementTests)
+ (package rocq-ltac2-judgement-tests)
+ (theories Ltac2 Ltac2Judgement))

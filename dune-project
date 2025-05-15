@@ -20,3 +20,7 @@
    rocq-core
    coq-core ; because dune needs coqc
 ))
+
+(package
+ (name rocq-ltac2-judgement-tests)
+ (depends rocq-ltac2-judgement))
