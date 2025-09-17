@@ -14,7 +14,7 @@
 
 (package
  (name rocq-ltac2-judgement)
- (synopsis "Ltac2 extensions for judgements (terms carrying their context)")
+ (synopsis "Ltac2 APIs to manipulate terms in modified contexts")
  (depends
    rocq-runtime
    rocq-core
