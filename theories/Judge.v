@@ -32,14 +32,6 @@ Ltac2 @external judge_ctx : 'a judge -> ctx
 Ltac2 @external judge_constr : 'a judge -> constr
   := "rocq-ltac2-judgement.plugin" "judge_constr".
 
-(** From arguments [Γ] [t] and [s] return [Γ ⊢ t : s] without checking anything. *)
-Ltac2 @external unsafe_typej : ctx -> constr -> sort -> typej
-  := "rocq-ltac2-judgement.plugin" "unsafe_typej".
-
-(** From arguments [Γ] [c] and [t] return [Γ ⊢ c : t] without checking anything. *)
-Ltac2 @external unsafe_termj : constr -> typej -> termj
-  := "rocq-ltac2-judgement.plugin" "unsafe_termj".
-
 (** From [id] and [Γ], if [id ∈ Γ] return [Γ ⊢ id : t] for apppropriate [t]. *)
 Ltac2 @external hypj : ident -> ctx -> termj
   := "rocq-ltac2-judgement.plugin" "hypj".
@@ -115,8 +107,3 @@ Ltac2 @external pretype_in_expecting : Constr.Pretype.Flags.t -> preterm -> type
 Ltac2 @external sort_of_product : sort -> sort -> sort
   := "rocq-ltac2-judgement.plugin" "sort_of_product".
 (* XXX upstream this *)
-
-(** [subst_vars [id1;...;idn] t] substitute [Var idj] by [Rel j] in [t] *)
-Ltac2 @external unsafe_subst_vars : ident list -> constr -> constr
-  := "rocq-ltac2-judgement.plugin" "subst_vars".
-(* XXX upstream this? *)
