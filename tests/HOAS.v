@@ -1,5 +1,5 @@
 From Ltac2 Require Import Ltac2.
-From Ltac2Judgement Require Import Init.
+From Ltac2Judgement Require Import Judge.
 
 Ltac2 mkProd (id:ident) (dom : typej) (codom : termj -> typej) :=
   let codom_ctx := push_named_assum id dom in
