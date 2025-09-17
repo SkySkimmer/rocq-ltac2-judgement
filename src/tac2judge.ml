@@ -25,6 +25,17 @@ let err_notfocussed =
 let err_invalid_arg msg =
   Tac2interp.LtacError (rocq_core "Invalid_argument", [|of_option of_pp msg|])
 
+let understand_uconstr_ty ~flags ~expected_type env sigma c =
+  let open Ltac_pretype in
+  let { closure; term } = c in
+  let vars = {
+    ltac_constrs = closure.typed;
+    ltac_uconstrs = closure.untyped;
+    ltac_idents = closure.idents;
+    ltac_genargs = closure.genargs;
+  } in
+  Pretyping.understand_ltac_ty flags env sigma vars expected_type term
+
 (* XXX add a rel context? but we may want to have some "dummy" entries
    to handle lifts, not sure how to do that yet. *)
 type ctx = Environ.named_context_val
@@ -174,7 +185,7 @@ let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
 let () = define "pretype_in" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, typ =
-    Pretyping.understand_uconstr_ty ~flags ~expected_type:WithoutTypeConstraint env sigma c
+    understand_uconstr_ty ~flags ~expected_type:WithoutTypeConstraint env sigma c
   in
   let res = { ctx; term = t; typ } in
   Proofview.Unsafe.tclEVARS sigma <*>
@@ -183,7 +194,7 @@ let () = define "pretype_in" (pretype_flags @-> ctx @-> preterm @-> tac termj) @
 let () = define "pretype_type_in" (pretype_flags @-> ctx @-> preterm @-> tac typej) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, ty =
-    Pretyping.understand_uconstr_ty ~flags ~expected_type:IsType env sigma c
+    understand_uconstr_ty ~flags ~expected_type:IsType env sigma c
   in
   let s = destSort sigma ty in
   let res = { ctx; term = t; typ = s } in
@@ -193,7 +204,7 @@ let () = define "pretype_type_in" (pretype_flags @-> ctx @-> preterm @-> tac typ
 let () = define "pretype_in_expecting" (pretype_flags @-> preterm @-> typej @-> tac termj) @@ fun flags c { ctx; term=ty; typ=s } ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, ty =
-    Pretyping.understand_uconstr_ty ~flags ~expected_type:(OfType ty) env sigma c
+    understand_uconstr_ty ~flags ~expected_type:(OfType ty) env sigma c
   in
   let res = { ctx; term = t; typ = ty } in
   Proofview.Unsafe.tclEVARS sigma <*>
