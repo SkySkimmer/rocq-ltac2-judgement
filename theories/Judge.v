@@ -10,9 +10,8 @@ Declare ML Module "rocq-ltac2-judgement.plugin".
 (** A context [Γ]. *)
 Ltac2 Type ctx.
 
-(** Term judgements [Γ ⊢ c : t] and type judgements [Γ ⊢ c : s]
-    are both instances of this type. When the phantom type is unknown
-    we see a generalized judgement [Γ ⊢ c : *]. *)
+(** Term judgements [Γ ⊢ c : t] and type judgements [Γ ⊢ c : s] are both instances of this type.
+    When the phantom type is unknown we see a generalized judgement [Γ ⊢ c : *]. *)
 Ltac2 Type 'phantom judge.
 
 Ltac2 Type term_phantom.
@@ -36,13 +35,15 @@ Ltac2 @external judge_constr : 'a judge -> constr
 Ltac2 @external hypj : ident -> ctx -> termj
   := "rocq-ltac2-judgement.plugin" "hypj".
 
-(** From arguments [Γ] and [c], check that [c] is well typed in [Γ]
-    with type [t] and return [Γ ⊢ c : t]. *)
+(** From arguments [Γ] and [c],
+    check that [c] is well typed in [Γ] with type [t]
+    and return [Γ ⊢ c : t]. *)
 Ltac2 @external infer_termj : ctx -> constr -> termj
   := "rocq-ltac2-judgement.plugin" "infer_termj".
 
-(** If the given judgement is [Γ ⊢ t : s] where [s] is a sort (or evar
-    which can be defined to a fresh sort), return type judgement [Γ ⊢ t : s].
+(** If the given judgement is [Γ ⊢ t : s] where [s] is a sort
+    (or evar which can be defined to a fresh sort),
+    return type judgement [Γ ⊢ t : s].
     Not to be confused with [typej_of_termj]. *)
 Ltac2 @external termj_is_typej : termj -> typej
   := "rocq-ltac2-judgement.plugin" "termj_is_typej".
@@ -51,19 +52,19 @@ Ltac2 @external termj_is_typej : termj -> typej
 Ltac2 @external typej_is_termj : typej -> termj
   := "rocq-ltac2-judgement.plugin" "typej_is_termj".
 
-(** Return the global context (containing section variables and no
-    goal hypotheses). *)
+(** Return the global context (containing section variables and no goal hypotheses). *)
 Ltac2 @external global_ctx : unit -> ctx
   := "rocq-ltac2-judgement.plugin" "global_ctx".
 
-(** If 1 goal is focused, return the goal context (containing goal
-    hypotheses, and any section variables which haven't been cleard).
+(** If 1 goal is focused, return the goal context
+    (containing goal hypotheses, and any section variables which haven't been cleared).
     Otherwise throw [Not_focussed]. *)
 Ltac2 @external goal_ctx : unit -> ctx
   := "rocq-ltac2-judgement.plugin" "goal_ctx".
 
-(** If no goals are focused, [global_ctx]. If 1 goal is focused,
-    [goal_ctx]. Otherwise throw [Not_focussed]. *)
+(** If no goals are focused, [global_ctx].
+    If 1 goal is focused, [goal_ctx].
+    Otherwise throw [Not_focussed]. *)
 Ltac2 @external current_ctx : unit -> ctx
   := "rocq-ltac2-judgement.plugin" "current_ctx".
 
@@ -76,7 +77,7 @@ Ltac2 @external typej_of_termj : termj -> typej
 Ltac2 @external sort_of_typej : typej -> sort
   := "rocq-ltac2-judgement.plugin" "sort_of_typej".
 
-(** Produce the relevance of the given sort (SProp -> Irrelevant, etc) *)
+(** Produce the relevance of the given sort (SProp -> Irrelevant, etc). *)
 Ltac2 @external relevance_of_sort : sort -> Constr.Binder.relevance
   := "rocq-ltac2-judgement.plugin" "relevance_of_sort".
 (* XXX upstream this *)
