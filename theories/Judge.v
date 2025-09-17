@@ -119,3 +119,7 @@ Ltac2 @external pretype_in_expecting : Constr.Pretype.Flags.t -> preterm -> type
 Ltac2 @external sort_of_product : sort -> sort -> sort
   := "rocq-ltac2-judgement.plugin" "sort_of_product".
 (* XXX upstream this *)
+
+(** Print the given context. *)
+Ltac2 @external message_of_ctx : ctx -> message
+  := "rocq-ltac2-judgement.plugin" "message_of_ctx".

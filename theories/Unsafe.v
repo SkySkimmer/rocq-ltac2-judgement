@@ -51,3 +51,8 @@ End Binder.
 Ltac2 @external eval_in_ctx : ctx -> Std.Red.t -> constr -> constr
   := "rocq-ltac2-judgement.plugin" "eval_in_ctx".
 (* XXX judgement version (but red can contain constr!) *)
+
+(** Print the given term in the given context (does not print the context). *)
+Ltac2 @external message_of_constr_in_ctx : ctx -> constr -> message
+  := "rocq-ltac2-judgement.plugin" "message_of_constr_in_ctx".
+(* XXX also add kfprintf_in_ctx for more convenient printing *)

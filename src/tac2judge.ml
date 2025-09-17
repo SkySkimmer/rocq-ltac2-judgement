@@ -302,6 +302,12 @@ let () = define "sort_of_product" (sort @-> sort @-> eret sort) @@ fun s1 s2 env
   let f s = EConstr.Unsafe.to_sorts s in
   ESorts.make @@ Typeops.sort_of_product env (f s1) (f s2)
 
+let () = define "message_of_ctx" (ctx @-> tac pp) @@ fun ctx ->
+  pf_apply_in ctx @@ fun env sigma -> return (Printer.pr_named_context env sigma ctx.env_named_ctx)
+
+let () = define "message_of_constr_in_ctx" (ctx @-> constr @-> tac pp) @@ fun ctx c ->
+  pf_apply_in ctx @@ fun env sigma -> return (Printer.pr_econstr_env env sigma c)
+
 let () =
   define "subst_vars" (list ident @-> constr @-> eret constr) @@ fun ids c _env sigma ->
   EConstr.Vars.subst_vars sigma ids c
