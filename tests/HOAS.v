@@ -31,3 +31,64 @@ Ltac2 Eval
       pretype_type_judge oflags (judge_ctx e) preterm:(@eq $refl_typc $ec eq_refl))))
   in
   c.
+
+(** unsafe HOAS (manual ctx manipulation) *)
+Ltac2 mkProd (ctx : ctx) (id:ident) (dom : constr) (codom : ctx -> constr -> constr) :=
+  let domr := Unsafe.relevance_of_type_in_ctx ctx dom in
+  let codom_ctx := Unsafe.push_named_assum ctx id dom domr in
+  let codom := codom codom_ctx (Constr.Unsafe.make (Constr.Unsafe.Var id)) in
+  let codom := Unsafe.subst_vars [id] codom in
+  Constr.Unsafe.make (Constr.Unsafe.Prod (Constr.Binder.unsafe_make (Some id) domr dom) codom).
+
+Ltac2 pretype_in_ctx flags ctx c :=
+  let j := pretype_judge flags ctx c in
+  judge_constr j.
+
+(* XXX "preterm" is at level 8 but we want to accept top level *)
+Ltac2 Notation "open_constr_in_ctx:(" ctx(tactic) "|-" x(preterm) ")" :=
+  pretype_in_ctx Constr.Pretype.Flags.open_constr_flags_no_tc ctx x.
+
+(* forall (A:Set) (x:A) (e:x = x), e = eq_refl
+   (term construction with a relatively high amout of dependency on introduced variables) *)
+Ltac2 Eval
+  let env := global_ctx() in
+  let c :=
+  mkProd env @A 'Set (fun env a =>
+   mkProd env @x a (fun env x =>
+    let refl_typ := open_constr_in_ctx:(env |- ($x = $x)) in
+    mkProd env @e refl_typ (fun env e =>
+      (* NB: because we are using named and not rel, refl_typ is still valid in the extended env *)
+      open_constr_in_ctx:(env |- (@eq $refl_typ $e eq_refl)))))
+  in
+  Control.assert_true (Constr.equal c '(forall (A:Set) (x:A) (e:x = x), e = eq_refl));
+  let _ := Constr.type c in
+  ().
+
+(* forall x:nat, (x = x) = (x = x)
+   demonstrates how the locally bound variable can be referred to in terms *)
+Ltac2 Eval
+  let env := global_ctx() in
+  let c :=
+  mkProd env @x 'nat (fun env x =>
+   (* we can refer to x as any of [x], [&x] and [$x]
+      (not sure how reliable bare [x] is) *)
+   let c1 := open_constr_in_ctx:(env |- (&x = x)) in
+   let c2 := open_constr_in_ctx:(env |- (&x = $x)) in
+   open_constr_in_ctx:(env |- ($c1 = $c2)))
+  in
+  Control.assert_true (Constr.equal c '(forall x:nat, (x = x) = (x = x))).
+
+(* forall x:nat, 2 + x = S (S x)
+   with the RHS constructed by reducing the LHS in the extended context *)
+Ltac2 Eval
+  let env := global_ctx() in
+  let c :=
+  mkProd env @x 'nat (fun env x =>
+    let y := open_constr_in_ctx:(env |- (2 + $x)) in
+    let y_reduced := Unsafe.eval_in_ctx env (Std.Red.simpl RedFlags.all None) y in
+    (* 'eq is '(@eq _) which produces a type evar with empty context *)
+    open_constr_in_ctx:(env |- ($y = $y_reduced)))
+  in
+  Control.assert_true (Constr.equal c '(forall x, 2 + x = S (S x)));
+  let _ := Constr.type c in
+  ().

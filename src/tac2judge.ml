@@ -44,6 +44,22 @@ let reset_ctx env (named : ctx) =
   let env = Environ.reset_with_named_context named env in
   env
 
+(* copied from tac2core *)
+let of_relevance : _ -> Tac2val.valexpr = function
+  | Sorts.Relevant -> ValInt 0
+  | Sorts.Irrelevant -> ValInt 1
+  | Sorts.RelevanceVar q -> ValBlk (0, [|of_qvar q|])
+
+let to_relevance : Tac2val.valexpr -> _ = function
+  | ValInt 0 -> Sorts.Relevant
+  | ValInt 1 -> Sorts.Irrelevant
+  | ValBlk (0, [|qvar|]) ->
+    let qvar = to_qvar qvar in
+    Sorts.RelevanceVar qvar
+  | _ -> assert false
+
+let relevance = make_repr of_relevance to_relevance
+
 module Pre92Compat : sig
   (* 9.2 exposes this from tac2core *)
   val wrap_exceptions : ?passthrough:bool -> (unit -> 'a Proofview.tactic) -> 'a Proofview.tactic
@@ -222,17 +238,23 @@ let () = define "sort_of_typej" (typej @-> ret sort) @@ fun j -> j.typ
 let () = define "typej_of_sort" (ctx @-> sort @-> ret typej) @@ fun ctx s ->
   { ctx; term = mkSort s; typ = (ESorts.make @@ Sorts.super @@ EConstr.Unsafe.to_sorts s) }
 
-(* NB if we add a rel context to [ctx], we must check that no rels appear in the type. *)
-let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
-  let named = j.ctx in
-  if Id.Map.mem id named.env_named_map then
+let push_named_assum_tac named id t r =
+  if Id.Map.mem id named.Environ.env_named_map then
     Tac2core.throw
       (err_invalid_arg
          (Some Pp.(str "Ltac2 judgement push_named_assum: " ++ Id.print id ++ str " not free.")))
   else
-    let idr = Context.make_annot id (ESorts.relevance_of_sort j.typ) in
-    let named = EConstr.push_named_context_val (LocalAssum (idr,j.term)) named in
+    let idr = Context.make_annot id r in
+    let named = EConstr.push_named_context_val (LocalAssum (idr,t)) named in
     return named
+
+let () =
+  define "unsafe_push_named_assum" (ctx @-> ident @-> constr @-> relevance @-> tac ctx) @@ fun ctx id t r ->
+  push_named_assum_tac ctx id t (ERelevance.make r)
+
+(* NB if we add a rel context to [ctx], we must check that no rels appear in the type. *)
+let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
+  push_named_assum_tac j.ctx id j.term (ESorts.relevance_of_sort j.typ)
 
 let () = define "pretype_judge" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
@@ -291,3 +313,27 @@ let relevance = make_repr of_relevance to_relevance
 let () =
   define "relevance_of_sort" (sort @-> eret relevance) @@ fun s _ sigma ->
   ERelevance.kind sigma @@ ESorts.relevance_of_sort s
+
+let () =
+  define "binder_make_in_ctx" (ctx @-> option ident @-> constr @-> tac binder) @@ fun ctx na ty ->
+  pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
+  match Retyping.relevance_of_type env sigma ty with
+  | rel ->
+    let na = match na with None -> Anonymous | Some id -> Name id in
+    return (Context.make_annot na rel, ty)
+  | exception (Retyping.RetypeError _ as e) ->
+    let e, info = Exninfo.capture e in
+    CErrors.user_err ~info Pp.(str "Not a type.")
+
+let () =
+  define "relevance_of_type_in_ctx" (ctx @-> constr @-> tac relevance) @@ fun ctx t ->
+  pf_apply_in ctx @@ fun env sigma ->
+  return (EConstr.Unsafe.to_relevance @@ Retyping.relevance_of_type env sigma t)
+
+let () =
+  define "eval_in_ctx" (ctx @-> reduction @-> constr @-> tac constr) @@ fun ctx red c ->
+  pf_apply_in ctx @@ fun env sigma ->
+  let (redfun, _) = Redexpr.reduction_of_red_expr env red in
+  let (sigma, ans) = redfun env sigma c in
+  Proofview.Unsafe.tclEVARS sigma >>= fun () ->
+  Proofview.tclUNIT ans
