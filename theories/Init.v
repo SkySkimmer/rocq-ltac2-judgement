@@ -99,12 +99,12 @@ Ltac2 @external push_named_assum : ident -> typej -> ctx
   := "rocq-ltac2-judgement.plugin" "push_named_assum".
 
 (** Infer a term judgement from a preterm in a given context. *)
-Ltac2 @external pretype_in : Constr.Pretype.Flags.t -> ctx -> preterm -> termj
-  := "rocq-ltac2-judgement.plugin" "pretype_in".
+Ltac2 @external pretype_judge : Constr.Pretype.Flags.t -> ctx -> preterm -> termj
+  := "rocq-ltac2-judgement.plugin" "pretype_judge".
 
 (** Infer a type judgement from a preterm in a given context. *)
-Ltac2 @external pretype_type_in : Constr.Pretype.Flags.t -> ctx -> preterm -> typej
-  := "rocq-ltac2-judgement.plugin" "pretype_type_in".
+Ltac2 @external pretype_type_judge : Constr.Pretype.Flags.t -> ctx -> preterm -> typej
+  := "rocq-ltac2-judgement.plugin" "pretype_type_judge".
 
 (** Infer a term judgement from a preterm at a given expected type
     (the judgement for the expected type contains the context). *)

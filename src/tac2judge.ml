@@ -182,7 +182,7 @@ let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
     let named = EConstr.push_named_context_val (LocalAssum (idr,j.term)) named in
     return named
 
-let () = define "pretype_in" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
+let () = define "pretype_judge" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, typ =
     understand_uconstr_ty ~flags ~expected_type:WithoutTypeConstraint env sigma c
@@ -191,7 +191,7 @@ let () = define "pretype_in" (pretype_flags @-> ctx @-> preterm @-> tac termj) @
   Proofview.Unsafe.tclEVARS sigma <*>
   return res
 
-let () = define "pretype_type_in" (pretype_flags @-> ctx @-> preterm @-> tac typej) @@ fun flags ctx c ->
+let () = define "pretype_type_judge" (pretype_flags @-> ctx @-> preterm @-> tac typej) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, ty =
     understand_uconstr_ty ~flags ~expected_type:IsType env sigma c

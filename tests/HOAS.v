@@ -19,14 +19,14 @@ Ltac2 Notation oflags := Constr.Pretype.Flags.open_constr_flags_no_tc.
 Ltac2 Eval
   let ctx := global_ctx() in
   let c : _ judge :=
-  mkProd @A (pretype_type_in oflags ctx preterm:(Set)) (fun a =>
+  mkProd @A (pretype_type_judge oflags ctx preterm:(Set)) (fun a =>
    mkProd @x (termj_is_typej a) (fun x =>
     let xc := judge_constr x in
-    let refl_typ := pretype_type_in oflags (judge_ctx x) preterm:($xc = $xc) in
+    let refl_typ := pretype_type_judge oflags (judge_ctx x) preterm:($xc = $xc) in
     mkProd @e refl_typ (fun e =>
       (* NB: because we are using named and not rel, refl_typ is still valid in the extended ctx *)
       let ec := judge_constr e in
       let refl_typc := judge_constr refl_typ in
-      pretype_type_in oflags (judge_ctx e) preterm:(@eq $refl_typc $ec eq_refl))))
+      pretype_type_judge oflags (judge_ctx e) preterm:(@eq $refl_typc $ec eq_refl))))
   in
   c.
