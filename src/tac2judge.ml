@@ -44,11 +44,63 @@ let reset_ctx env (named : ctx) =
   let env = Environ.reset_with_named_context named env in
   env
 
+module Pre92Compat : sig
+  (* 9.2 exposes this from tac2core *)
+  val wrap_exceptions : ?passthrough:bool -> (unit -> 'a Proofview.tactic) -> 'a Proofview.tactic
+end = struct
+
+type fatal_flag
+
+(* Hack! *)
+let fatal_flag : fatal_flag Exninfo.t =
+  let hash = Hashtbl.hash "fatal_flag" in
+  Obj.magic hash
+
+let has_fatal_flag info = match Exninfo.get info fatal_flag with
+  | None -> false
+  | Some _ -> true
+
+(* test that the hack worked *)
+let () =
+  let test_tac = Tac2core.throw Exit in
+  match Proofview.apply ~name:(Id.of_string "test") ~poly:false Environ.empty_env test_tac
+          (snd @@ Proofview.init Evd.empty [])
+  with
+  | _,_,_,_,_ -> assert false
+  | exception (Exit as e) ->
+    let e, info = Exninfo.capture e in
+    assert (has_fatal_flag info)
+  | exception _ -> assert false
+
+let set_bt info =
+  if !Tac2bt.print_ltac2_backtrace then
+    Tac2bt.get_backtrace >>= fun bt ->
+    Proofview.tclUNIT (Exninfo.add info Tac2bt.backtrace bt)
+  else Proofview.tclUNIT info
+
+let catchable_exception = function
+  | Logic_monad.Exception _ -> false
+  | e -> CErrors.noncritical e
+
+let wrap_exceptions ?(passthrough=false) f =
+  try f ()
+  with e ->
+    let e, info = Exninfo.capture e in
+    set_bt info >>= fun info ->
+    if not passthrough && catchable_exception e
+    then begin if has_fatal_flag info
+      then Proofview.tclLIFT (Proofview.NonLogical.raise (e, info))
+      else Proofview.tclZERO ~info e
+    end
+    else Exninfo.iraise (e, info)
+
+end
+
 let pf_apply_in ?(catch_exceptions=false) ctx f =
   Proofview.tclEVARMAP >>= fun sigma ->
   Proofview.tclENV >>= fun genv ->
   let env = reset_ctx genv ctx in
-  Tac2core.wrap_exceptions ~passthrough:(not catch_exceptions) (fun () -> f env sigma)
+  Pre92Compat.wrap_exceptions ~passthrough:(not catch_exceptions) (fun () -> f env sigma)
 
 type 'a judge = {
   ctx : ctx;
