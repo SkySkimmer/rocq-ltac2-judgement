@@ -31,9 +31,20 @@ Ltac2 @external judge_ctx : 'a judge -> ctx
 Ltac2 @external judge_constr : 'a judge -> constr
   := "rocq-ltac2-judgement.plugin" "judge_constr".
 
-(** From [id] and [Γ], if [id ∈ Γ] return [Γ ⊢ id : t] for apppropriate [t]. *)
+(** Returns the idents bound in argument [Γ]. *)
+Ltac2 @external ctx_hyps : ctx -> ident list
+  := "rocq-ltac2-judgement.plugin" "ctx_hyps".
+
+(** From [id] and [Γ], if [id ∈ Γ] return [Γ ⊢ id : t] for apppropriate [t].
+    If [id ∉ Γ], backtracking failure. *)
 Ltac2 @external hypj : ident -> ctx -> termj
   := "rocq-ltac2-judgement.plugin" "hypj".
+
+(** From [id] and [Γ], if [id := v : t ∈ Γ] return [Some (Γ ⊢ v : t)].
+    If [id ∈ Γ] without a body, return [None].
+    If [id ∉ Γ], backtracking failure. *)
+Ltac2 @external hyp_valuej : ident -> ctx -> termj option
+  := "rocq-ltac2-judgement.plugin" "hyp_valuej".
 
 (** From arguments [Γ] and [c],
     check that [c] is well typed in [Γ] with type [t]

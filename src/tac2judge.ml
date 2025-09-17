@@ -186,15 +186,28 @@ let () = define "unsafe_typej" (ctx @-> constr @-> sort @-> ret typej) @@ fun ct
 let () = define "unsafe_termj" (constr @-> typej @-> ret termj) @@ fun c j ->
   { ctx = j.ctx; term=c; typ=j.term }
 
+let () = define "ctx_hyps" (ctx @-> ret (list ident)) @@ fun ctx ->
+  List.map NamedDecl.get_id ctx.env_named_ctx
+
 let () = define "hypj" (ident @-> ctx @-> tac termj) @@ fun id ctx ->
   match EConstr.lookup_named_val id ctx with
   | exception Not_found ->
+    (* FIXME: Do something more sensible *)
     Tacticals.tclZEROMSG
       Pp.(str "Hypothesis " ++ quote (Id.print id) ++ str " not found")
-      (* FIXME: Do something more sensible *)
   | d ->
     let t = NamedDecl.get_type d in
     return { ctx; term = mkVar id; typ=t }
+
+let () = define "hyp_valuej" (ctx @-> ident @-> tac (option termj)) @@ fun ctx id ->
+  pf_apply_in ctx @@ fun env _ ->
+  match EConstr.lookup_named id env with
+  | exception Not_found ->
+    (* FIXME: Do something more sensible *)
+    Tacticals.tclZEROMSG
+      Pp.(str "Hypothesis " ++ quote (Id.print id) ++ str " not found")
+  | LocalAssum _ -> return None
+  | LocalDef (_,bdy,typ) -> return (Some { ctx; term = bdy; typ })
 
 let () = define "infer_termj" (ctx @-> constr @-> tac termj) @@ fun ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
