@@ -11,6 +11,7 @@ Ltac2 mkProd (id:ident) (dom : typej) (codom : termj -> typej) :=
   let c := Constr.Unsafe.make (Constr.Unsafe.Prod bnd codom) in
   unsafe_typej (judge_ctx dom) c (sort_of_product (sort_of_typej dom) (sort_of_typej codomj)).
 
+#[warnings="-ltac2-notation-for-abbreviation"]
 Ltac2 Notation oflags := Constr.Pretype.Flags.open_constr_flags_no_tc.
 
 (* forall (A:Set) (x:A) (e:x = x), e = eq_refl
