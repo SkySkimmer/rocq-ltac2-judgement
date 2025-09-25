@@ -16,7 +16,14 @@ Ltac2 @external subst_vars : ident list -> constr -> constr
   := "rocq-ltac2-judgement.plugin" "subst_vars".
 (* XXX upstream this? *)
 
-(** From arguments [Γ] and [c], if [c] is a valid type in [Γ] return its relevance (by retyping).
+(** From arguments [Γ] and [c], if [c] is a valid term in [Γ] return its relevance as a term
+    (faster than retyping but not quite constant time).
+    Does not check that [c] is a valid term in [Γ]. *)
+Ltac2 @external relevance_of_term_in_ctx : ctx -> constr -> Constr.Binder.relevance
+  := "rocq-ltac2-judgement.plugin" "relevance_of_term_in_ctx".
+
+(** From arguments [Γ] and [c], if [c] is a valid type in [Γ] return its relevance as a type
+    (by retyping).
     Does not check that [c] is a valid type in [Γ]. *)
 Ltac2 @external relevance_of_type_in_ctx : ctx -> constr -> Constr.Binder.relevance
   := "rocq-ltac2-judgement.plugin" "relevance_of_type_in_ctx".
@@ -26,6 +33,12 @@ Ltac2 @external relevance_of_type_in_ctx : ctx -> constr -> Constr.Binder.releva
     Does not check that [t] is valid or has relevance [r] in [Γ]. *)
 Ltac2 @external push_named_assum : ctx -> ident -> constr -> Constr.Binder.relevance -> ctx
   := "rocq-ltac2-judgement.plugin" "unsafe_push_named_assum".
+
+(** From arguments [Γ] [id] [c] [t] and [r], produces [Γ, id := c : t] assuming [t] has relevance [r].
+    Throws if [id] is already bound in [Γ].
+    Does not check anything else. *)
+Ltac2 @external push_named_def : ctx -> ident -> constr -> constr -> Constr.Binder.relevance -> ctx
+  := "rocq-ltac2-judgement.plugin" "unsafe_push_named_def".
 
 Module Binder.
 

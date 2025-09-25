@@ -92,3 +92,20 @@ Ltac2 Eval
   Control.assert_true (Constr.equal c '(forall x, 2 + x = S (S x)));
   let _ := Constr.type c in
   ().
+
+Ltac2 mkLetIn (ctx : ctx) (id:ident) (value : constr) (typ : constr) (body : ctx -> constr -> constr) :=
+  let r := Unsafe.relevance_of_term_in_ctx ctx value in
+  let body_ctx := Unsafe.push_named_def ctx id value typ r in
+  let body := body body_ctx (Constr.Unsafe.make (Constr.Unsafe.Var id)) in
+  let body := Unsafe.subst_vars [id] body in
+  Constr.Unsafe.make (Constr.Unsafe.LetIn (Constr.Binder.unsafe_make (Some id) r typ) value body).
+
+Ltac2 Eval
+  let env := global_ctx() in
+  let c :=
+  mkLetIn env @x '3 'nat (fun env x =>
+    open_constr_in_ctx:(env |- (eq_refl : $x = 3)))
+  in
+  Control.assert_true (Constr.equal c '(let x := 3 in eq_refl : x = 3));
+  let _ := Constr.type c in
+  ().

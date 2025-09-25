@@ -102,6 +102,13 @@ Ltac2 @external typej_of_sort : ctx -> sort -> typej
 Ltac2 @external push_named_assum : ident -> typej -> ctx
   := "rocq-ltac2-judgement.plugin" "push_named_assum".
 
+(** From arguments [id] and [Γ ⊢ c : t], produce [Γ, id := c : t].
+    [id] must be fresh in [Γ].
+    The relevance is obtained by examining the term
+    (faster than retyping but not quite constant time). *)
+Ltac2 @external push_named_def : ident -> termj -> ctx
+  := "rocq-ltac2-judgement.plugin" "push_named_def".
+
 (** Infer a term judgement from a preterm in a given context. *)
 Ltac2 @external pretype_judge : Constr.Pretype.Flags.t -> ctx -> preterm -> termj
   := "rocq-ltac2-judgement.plugin" "pretype_judge".
