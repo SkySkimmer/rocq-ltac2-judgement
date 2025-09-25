@@ -356,3 +356,29 @@ let () =
   let (sigma, ans) = redfun env sigma c in
   Proofview.Unsafe.tclEVARS sigma >>= fun () ->
   Proofview.tclUNIT ans
+
+let to_conv_pb v = match Tac2ffi.to_int v with
+| 0 -> Conversion.CONV
+| 1 -> Conversion.CUMUL
+| _ -> assert false
+
+let () =
+  define "conv_in_ctx" (to_conv_pb @--> transparent_state @-> ctx @-> constr @-> constr @-> tac bool) @@ fun pb ts ctx c1 c2 ->
+  pf_apply_in ctx @@ fun env sigma ->
+    match Reductionops.infer_conv ~pb ~ts env sigma c1 c2 with
+  | Some sigma -> Proofview.Unsafe.tclEVARS sigma <*> return true
+  | None -> return false
+
+let () =
+  define "unify_in_ctx" (to_conv_pb @--> transparent_state @-> ctx @-> constr @-> constr @-> tac unit) @@ fun pb ts ctx c1 c2 ->
+  pf_apply_in ctx @@ fun env sigma ->
+    try
+    let flags = Evarconv.default_flags_of ts in
+    let sigma = Evarconv.unify ~flags env sigma pb c1 c2 in
+    Proofview.Unsafe.tclEVARS sigma
+    with
+    | Evarconv.UnableToUnify (sigma, reason) as e ->
+      let e, info = Exninfo.capture e in
+      Proofview.tclZERO ~info
+        (Pretype_errors.PretypeError
+           (env, sigma, CannotUnify (c1, c2, Some reason)))
