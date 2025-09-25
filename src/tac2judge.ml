@@ -269,6 +269,23 @@ let () =
 let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
   push_named_assum_tac j.ctx id j.term (ESorts.relevance_of_sort j.typ)
 
+let push_named_def_tac named id c t r =
+  if Id.Map.mem id named.Environ.env_named_map then
+    Tac2core.throw
+      (err_invalid_arg
+         (Some Pp.(str "Ltac2 judgement push_named_assum: " ++ Id.print id ++ str " not free.")))
+  else
+    let idr = Context.make_annot id r in
+    let named = EConstr.push_named_context_val (LocalDef (idr,c,t)) named in
+    return named
+
+let () = define "unsafe_push_named_def" (ctx @-> ident @-> constr @-> constr @-> relevance @-> tac ctx) @@ fun ctx id c t r ->
+  push_named_def_tac ctx id c t (ERelevance.make r)
+
+let () = define "push_named_def" (ident @-> termj @-> tac ctx) @@ fun id j ->
+  pf_apply_in j.ctx @@ fun env sigma ->
+  push_named_def_tac j.ctx id j.term j.typ (Retyping.relevance_of_term env sigma j.term)
+
 let () = define "pretype_judge" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
   let sigma, t, typ =
@@ -343,6 +360,11 @@ let () =
   | exception (Retyping.RetypeError _ as e) ->
     let e, info = Exninfo.capture e in
     CErrors.user_err ~info Pp.(str "Not a type.")
+
+let () =
+  define "relevance_of_term_in_ctx" (ctx @-> constr @-> tac relevance) @@ fun ctx t ->
+  pf_apply_in ctx @@ fun env sigma ->
+  return (EConstr.Unsafe.to_relevance @@ Retyping.relevance_of_term env sigma t)
 
 let () =
   define "relevance_of_type_in_ctx" (ctx @-> constr @-> tac relevance) @@ fun ctx t ->
