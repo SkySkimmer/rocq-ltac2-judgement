@@ -399,8 +399,6 @@ let () =
     let sigma = Evarconv.unify ~flags env sigma pb c1 c2 in
     Proofview.Unsafe.tclEVARS sigma
     with
-    | Evarconv.UnableToUnify (sigma, reason) as e ->
+    | Pretype_errors.PretypeError _ as e ->
       let e, info = Exninfo.capture e in
-      Proofview.tclZERO ~info
-        (Pretype_errors.PretypeError
-           (env, sigma, CannotUnify (c1, c2, Some reason)))
+      Proofview.tclZERO ~info e
