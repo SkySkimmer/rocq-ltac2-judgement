@@ -1,5 +1,5 @@
 From Ltac2 Require Import Init.
-From Ltac2 Require Constr Std.
+From Ltac2 Require Constr Std Unification.
 
 From Ltac2Judgement Require Import Judge.
 
@@ -56,3 +56,21 @@ Ltac2 @external eval_in_ctx : ctx -> Std.Red.t -> constr -> constr
 Ltac2 @external message_of_constr_in_ctx : ctx -> constr -> message
   := "rocq-ltac2-judgement.plugin" "message_of_constr_in_ctx".
 (* XXX also add kfprintf_in_ctx for more convenient printing *)
+
+(** [conv_in_ctx] returns true if both terms are convertible, in which case it updates the
+    environment with the universes constraints required for the terms to be convertible.
+    It returns false if the terms are not convertible.
+    It fails if there is more than one goal under focus.
+
+    [conv_in_ctx] is parametrised by:
+    - Unification.conv_flag which controls if conversion is done up to cumulativity or not
+    - TransparentState.t which controls which constants get unfolded during conversion
+*)
+Ltac2 @external conv_in_ctx : Unification.conv_flag -> TransparentState.t -> ctx -> constr -> constr -> bool
+  := "rocq-ltac2-judgement.plugin" "conv_in_ctx".
+
+(** [unify pb ts ctx c1 c2] unifies [c1] and [c2] in [ctx] (using Evarconv unification), which
+    may have the effect of instantiating evars. If the [c1] and [c2] cannot be
+    unified, an [Internal] exception is raised. *)
+Ltac2 @external unify_in_ctx : Unification.conv_flag -> TransparentState.t -> ctx -> constr -> constr -> unit
+  := "rocq-ltac2-judgement.plugin" "unify_in_ctx".
