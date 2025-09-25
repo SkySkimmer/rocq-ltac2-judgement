@@ -150,10 +150,10 @@ let to_typej j : typej = match Tac2ffi.to_ext val_judge j with
 let termj = Tac2ffi.make_repr of_termj to_termj
 let typej = Tac2ffi.make_repr of_typej to_typej
 
-let judge_init =
-  MPfile (DirPath.make @@ List.map Id.of_string ["Init";"Ltac2Judgement"])
+let judge_mp =
+  MPfile (DirPath.make @@ List.map Id.of_string ["Judge";"Ltac2Judgement"])
 
-let judge_init_kn s = KerName.make judge_init (Label.of_id @@ Id.of_string s)
+let judge_kn s = KerName.make judge_mp (Label.of_id @@ Id.of_string s)
 
 let pp_ctx env sigma (ctx:ctx) =
   let env = reset_ctx env ctx in
@@ -171,9 +171,9 @@ let pp_judge env sigma (j:any_judge) =
      Printer.pr_econstr_env ~inctx:true env sigma term ++
      str " :" ++ spc() ++ Printer.pr_letype_env env sigma typ)
 
-let () = Tac2print.register_val_printer (judge_init_kn "ctx") { val_printer = fun env sigma v _ ->
+let () = Tac2print.register_val_printer (judge_kn "ctx") { val_printer = fun env sigma v _ ->
     pp_ctx env sigma (repr_to ctx v) }
-let () = Tac2print.register_val_printer (judge_init_kn "judge") { val_printer = fun env sigma v _ ->
+let () = Tac2print.register_val_printer (judge_kn "judge") { val_printer = fun env sigma v _ ->
     pp_judge env sigma (repr_to judge v) }
 
 let () = define "judge_ctx" (judge @-> ret ctx) @@ fun (AnyJ (_, t)) -> t.ctx
