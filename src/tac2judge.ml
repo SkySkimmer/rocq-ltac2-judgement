@@ -125,7 +125,6 @@ let val_ctx : ctx Tac2dyn.Val.tag = Tac2dyn.Val.create "judge-ctx"
 let val_judge : any_judge Tac2dyn.Val.tag = Tac2dyn.Val.create "judge"
 
 let ctx = Tac2ffi.repr_ext val_ctx
-let judge = Tac2ffi.repr_ext val_judge
 
 let of_termj j = Tac2ffi.of_ext val_judge (AnyJ (TermJudge, j))
 let of_typej j = Tac2ffi.of_ext val_judge (AnyJ (TypeJudge, j))
@@ -147,26 +146,30 @@ let pp_ctx env sigma (ctx:ctx) =
   let env = reset_ctx env ctx in
   Printer.pr_named_context_of env sigma
 
-let pp_judge env sigma (j:any_judge) =
+let pp_termj env sigma {ctx; term; typ} =
   let open Pp in
-  let {ctx; term; typ} : termj = match j with
-    | AnyJ (TermJudge, j) -> j
-    | AnyJ (TypeJudge, {ctx; term=t; typ=s}) -> {ctx; term=t; typ=mkSort s}
-  in
   let env = reset_ctx env ctx in
   hov 2
     (pp_ctx env sigma ctx ++ str " |-" ++ spc() ++
      Printer.pr_econstr_env ~inctx:true env sigma term ++
      str " :" ++ spc() ++ Printer.pr_letype_env env sigma typ)
 
+let pp_typej env sigma {ctx; term; typ} = pp_termj env sigma {ctx; term; typ=mkSort typ}
+
 let () = Tac2print.register_val_printer (judge_kn "ctx") { val_printer = fun env sigma v _ ->
     pp_ctx env sigma (repr_to ctx v) }
-let () = Tac2print.register_val_printer (judge_kn "judge") { val_printer = fun env sigma v _ ->
-    pp_judge env sigma (repr_to judge v) }
+let () = Tac2print.register_val_printer (judge_kn "termj") { val_printer = fun env sigma v _ ->
+    pp_termj env sigma (repr_to termj v) }
+let () = Tac2print.register_val_printer (judge_kn "typej") { val_printer = fun env sigma v _ ->
+    pp_typej env sigma (repr_to typej v) }
 
-let () = define "judge_ctx" (judge @-> ret ctx) @@ fun (AnyJ (_, t)) -> t.ctx
+let () = define "ctx_of_termj" (termj @-> ret ctx) @@ fun t -> t.ctx
 
-let () = define "judge_constr" (judge @-> ret constr) @@ fun (AnyJ (_, t)) -> t.term
+let () = define "ctx_of_typej" (typej @-> ret ctx) @@ fun t -> t.ctx
+
+let () = define "term_of_termj" (termj @-> ret constr) @@ fun t -> t.term
+
+let () = define "type_of_typej" (typej @-> ret constr) @@ fun t -> t.term
 
 let () = define "unsafe_typej" (ctx @-> constr @-> sort @-> ret typej) @@ fun ctx t s ->
   { ctx; term=t; typ=s }

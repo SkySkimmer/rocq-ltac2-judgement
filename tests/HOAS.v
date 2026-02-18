@@ -6,11 +6,11 @@ Ltac2 mkProdj (id:ident) (dom : typej) (codom : termj -> typej) :=
   let codom_ctx := push_named_assum id dom in
   let codomj := codom (hypj id codom_ctx) in
   (* XXX should assert that codomj has compatible context with dom to be safe *)
-  let codom := Unsafe.subst_vars [id] (judge_constr codomj) in
+  let codom := Unsafe.subst_vars [id] (Unsafe.type_of_typej codomj) in
   let r := relevance_of_sort (sort_of_typej dom) in
-  let bnd := Constr.Binder.unsafe_make (Some id) r (judge_constr dom) in
+  let bnd := Constr.Binder.unsafe_make (Some id) r (Unsafe.type_of_typej dom) in
   let c := Constr.Unsafe.make (Constr.Unsafe.Prod bnd codom) in
-  Unsafe.typej (judge_ctx dom) c (sort_of_product (sort_of_typej dom) (sort_of_typej codomj)).
+  Unsafe.typej (ctx_of_typej dom) c (sort_of_product (sort_of_typej dom) (sort_of_typej codomj)).
 
 #[warnings="-ltac2-notation-for-abbreviation"]
 Ltac2 Notation oflags := Constr.Pretype.Flags.open_constr_flags_no_tc.
@@ -19,16 +19,16 @@ Ltac2 Notation oflags := Constr.Pretype.Flags.open_constr_flags_no_tc.
    (term construction with a relatively high amout of dependency on introduced variables) *)
 Ltac2 Eval
   let ctx := global_ctx() in
-  let c : _ judge :=
+  let c : typej :=
   mkProdj @A (pretype_type_judge oflags ctx preterm:(Set)) (fun a =>
    mkProdj @x (termj_is_typej a) (fun x =>
-    let xc := judge_constr x in
-    let refl_typ := pretype_type_judge oflags (judge_ctx x) preterm:($xc = $xc) in
+    let xc := Unsafe.term_of_termj x in
+    let refl_typ := pretype_type_judge oflags (ctx_of_termj x) preterm:($xc = $xc) in
     mkProdj @e refl_typ (fun e =>
       (* NB: because we are using named and not rel, refl_typ is still valid in the extended ctx *)
-      let ec := judge_constr e in
-      let refl_typc := judge_constr refl_typ in
-      pretype_type_judge oflags (judge_ctx e) preterm:(@eq $refl_typc $ec eq_refl))))
+      let ec := Unsafe.term_of_termj e in
+      let refl_typc := Unsafe.type_of_typej refl_typ in
+      pretype_type_judge oflags (ctx_of_termj e) preterm:(@eq $refl_typc $ec eq_refl))))
   in
   c.
 
@@ -42,7 +42,7 @@ Ltac2 mkProd (ctx : ctx) (id:ident) (dom : constr) (codom : ctx -> constr -> con
 
 Ltac2 pretype_in_ctx flags ctx c :=
   let j := pretype_judge flags ctx c in
-  judge_constr j.
+  Unsafe.term_of_termj j.
 
 (* XXX "preterm" is at level 8 but we want to accept top level *)
 Ltac2 Notation "open_constr_in_ctx:(" ctx(tactic) "|-" x(preterm) ")" :=

@@ -3,6 +3,14 @@ From Ltac2 Require Constr Std Unification.
 
 From Ltac2Judgement Require Import Judge.
 
+(** From argument [Γ ⊢ c : t] return [c]. *)
+Ltac2 @external term_of_termj : termj -> constr
+  := "rocq-ltac2-judgement.plugin" "term_of_termj".
+
+(** From argument [Γ ⊢ t : s] return [t]. *)
+Ltac2 @external type_of_typej : typej -> constr
+  := "rocq-ltac2-judgement.plugin" "type_of_typej".
+
 (** From arguments [Γ] [t] and [s] return [Γ ⊢ t : s] without checking anything. *)
 Ltac2 @external typej : ctx -> constr -> sort -> typej
   := "rocq-ltac2-judgement.plugin" "unsafe_typej".
@@ -49,7 +57,7 @@ Module Binder.
       (eg [Std.eval_hnf (Constr.Binder.type (of_typej ...))])
       is not safe. *)
   Ltac2 of_typej (na : ident option) (j : typej) : binder :=
-    Constr.Binder.unsafe_make na (relevance_of_sort (sort_of_typej j)) (judge_constr j).
+    Constr.Binder.unsafe_make na (relevance_of_sort (sort_of_typej j)) (type_of_typej j).
 
   (** From arguments [Γ] [na] [t] produces the binder for [na : t],
       retyping [t] in [Γ] to get its relevance. *)

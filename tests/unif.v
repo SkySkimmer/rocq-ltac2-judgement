@@ -4,7 +4,7 @@ From Ltac2Judgement Require Unsafe.
 
 Ltac2 pretype_in_ctx flags ctx c :=
   let j := pretype_judge flags ctx c in
-  judge_constr j.
+  Unsafe.term_of_termj j.
 
 (* XXX "preterm" is at level 8 but we want to accept top level *)
 Ltac2 Notation "open_constr_in_ctx:(" ctx(tactic) "|-" x(preterm) ")" :=

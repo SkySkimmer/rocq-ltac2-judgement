@@ -10,26 +10,19 @@ Declare ML Module "rocq-ltac2-judgement.plugin".
 (** A context [Γ]. *)
 Ltac2 Type ctx.
 
-(** Term judgements [Γ ⊢ c : t] and type judgements [Γ ⊢ c : s] are both instances of this type.
-    When the phantom type is unknown we see a generalized judgement [Γ ⊢ c : *]. *)
-Ltac2 Type 'phantom judge.
-
-Ltac2 Type term_phantom.
-Ltac2 Type type_phantom.
-
 (** A judgement [Γ ⊢ c : t]. *)
-Ltac2 Type termj := term_phantom judge.
+Ltac2 Type termj.
 
-(** A type judgement [Γ ⊢ t : s] ([s] is s sort). *)
-Ltac2 Type typej := type_phantom judge.
+(** A type judgement [Γ ⊢ t : s] ([s] is a sort). *)
+Ltac2 Type typej.
 
-(** From argument [Γ ⊢ c : *] return [Γ]. *)
-Ltac2 @external judge_ctx : 'a judge -> ctx
-  := "rocq-ltac2-judgement.plugin" "judge_ctx".
+(** From argument [Γ ⊢ c : t] return [Γ]. *)
+Ltac2 @external ctx_of_termj : termj -> ctx
+  := "rocq-ltac2-judgement.plugin" "ctx_of_termj".
 
-(** From argument [Γ ⊢ c : *] return [c]. *)
-Ltac2 @external judge_constr : 'a judge -> constr
-  := "rocq-ltac2-judgement.plugin" "judge_constr".
+(** From argument [Γ ⊢ t : s] return [Γ]. *)
+Ltac2 @external ctx_of_typej : typej -> ctx
+  := "rocq-ltac2-judgement.plugin" "ctx_of_typej".
 
 (** Returns the idents bound in argument [Γ]. *)
 Ltac2 @external ctx_hyps : ctx -> ident list
