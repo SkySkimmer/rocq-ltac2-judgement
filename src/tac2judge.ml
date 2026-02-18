@@ -112,30 +112,17 @@ type 'a judge = {
   typ : 'a;
 }
 
-type _ judge_kind =
-  | TermJudge : EConstr.types judge_kind
-  | TypeJudge : EConstr.ESorts.t judge_kind
-
-type any_judge = AnyJ : 'k judge_kind * 'k judge -> any_judge
-
 type termj = EConstr.types judge
 type typej = EConstr.ESorts.t judge
 
 let val_ctx : ctx Tac2dyn.Val.tag = Tac2dyn.Val.create "judge-ctx"
-let val_judge : any_judge Tac2dyn.Val.tag = Tac2dyn.Val.create "judge"
+let val_termj : termj Tac2dyn.Val.tag = Tac2dyn.Val.create "termj"
+let val_typej : typej Tac2dyn.Val.tag = Tac2dyn.Val.create "typej"
 
 let ctx = Tac2ffi.repr_ext val_ctx
 
-let of_termj j = Tac2ffi.of_ext val_judge (AnyJ (TermJudge, j))
-let of_typej j = Tac2ffi.of_ext val_judge (AnyJ (TypeJudge, j))
-let to_termj j : termj = match Tac2ffi.to_ext val_judge j with
-  | AnyJ (TermJudge, j) -> j
-  | AnyJ (TypeJudge, _) -> assert false
-let to_typej j : typej = match Tac2ffi.to_ext val_judge j with
-  | AnyJ (TypeJudge, j) -> j
-  | AnyJ (TermJudge, _) -> assert false
-let termj = Tac2ffi.make_repr of_termj to_termj
-let typej = Tac2ffi.make_repr of_typej to_typej
+let termj = Tac2ffi.repr_ext val_termj
+let typej = Tac2ffi.repr_ext val_typej
 
 let judge_mp =
   MPfile (DirPath.make @@ List.map Id.of_string ["Judge";"Ltac2Judgement"])
