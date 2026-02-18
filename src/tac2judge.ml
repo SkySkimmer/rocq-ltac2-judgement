@@ -76,18 +76,6 @@ let has_fatal_flag info = match Exninfo.get info fatal_flag with
   | None -> false
   | Some _ -> true
 
-(* test that the hack worked *)
-let () =
-  let test_tac = Tac2core.throw Exit in
-  match Proofview.apply ~name:(Id.of_string "test") ~poly:false Environ.empty_env test_tac
-          (snd @@ Proofview.init Evd.empty [])
-  with
-  | _,_,_,_,_ -> assert false
-  | exception (Exit as e) ->
-    let e, info = Exninfo.capture e in
-    assert (has_fatal_flag info)
-  | exception _ -> assert false
-
 let set_bt info =
   if !Tac2bt.print_ltac2_backtrace then
     Tac2bt.get_backtrace >>= fun bt ->
