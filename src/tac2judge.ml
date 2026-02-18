@@ -134,7 +134,7 @@ let judge_kn s = KerName.make judge_mp (Label.of_id @@ Id.of_string s)
 
 let pp_ctx env sigma (ctx:ctx) =
   let env = reset_ctx env ctx in
-  Printer.pr_named_context_of env sigma
+  Printer.pr_context_of env sigma
 
 let pp_termj env sigma {ctx; term; typ} =
   let open Pp in
