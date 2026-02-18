@@ -36,13 +36,16 @@ let understand_uconstr_ty ~flags ~expected_type env sigma c =
   } in
   Pretyping.understand_ltac_ty flags env sigma vars expected_type term
 
-(* XXX add a rel context? but we may want to have some "dummy" entries
+(* we may want to have some "dummy" rel entries
    to handle lifts, not sure how to do that yet. *)
-type ctx = Environ.named_context_val
+type ctx = {
+  named : Environ.named_context_val;
+  rel : Environ.rel_context_val;
+}
 
-let reset_ctx env (named : ctx) =
-  let env = Environ.reset_with_named_context named env in
-  env
+let reset_ctx env ctx =
+  let env = Environ.reset_with_named_context ctx.named env in
+  Environ.set_rel_context_val ctx.rel env
 
 (* copied from tac2core *)
 let of_relevance : _ -> Tac2val.valexpr = function
@@ -165,10 +168,10 @@ let () = define "unsafe_termj" (constr @-> typej @-> ret termj) @@ fun c j ->
   { ctx = j.ctx; term=c; typ=j.term }
 
 let () = define "ctx_hyps" (ctx @-> ret (list ident)) @@ fun ctx ->
-  List.map NamedDecl.get_id ctx.env_named_ctx
+  List.map NamedDecl.get_id ctx.named.env_named_ctx
 
 let () = define "hypj" (ident @-> ctx @-> tac termj) @@ fun id ctx ->
-  match EConstr.lookup_named_val id ctx with
+  match EConstr.lookup_named_val id ctx.named with
   | exception Not_found ->
     (* FIXME: Do something more sensible *)
     Tacticals.tclZEROMSG
@@ -202,10 +205,12 @@ let () = define "termj_is_typej" (termj @-> tac typej) @@ fun { ctx; term; typ }
 let () = define "typej_is_termj" (typej @-> ret termj) @@ fun { ctx; term; typ } ->
   { ctx; term; typ = mkSort typ }
 
-let ctx_of_env env : ctx = Environ.named_context_val env
+let ctx_of_env env : ctx = {
+  named = Environ.named_context_val env;
+  rel = Environ.rel_context_val env;
+}
 
 let () = define "global_ctx" (unit @-> eret ctx) @@ fun () env _ ->
-  (* rel context is always empty but getting the empty context this way is fine *)
   ctx_of_env env
 
 let () = define "goal_ctx" (unit @-> tac ctx) @@ fun () ->
@@ -229,40 +234,54 @@ let () = define "sort_of_typej" (typej @-> ret sort) @@ fun j -> j.typ
 let () = define "typej_of_sort" (ctx @-> sort @-> ret typej) @@ fun ctx s ->
   { ctx; term = mkSort s; typ = (ESorts.make @@ Sorts.super @@ EConstr.Unsafe.to_sorts s) }
 
-let push_named_assum_tac named id t r =
-  if Id.Map.mem id named.Environ.env_named_map then
+let push_named_assum_tac ctx id t r =
+  if Id.Map.mem id ctx.named.env_named_map then
     Tac2core.throw
       (err_invalid_arg
          (Some Pp.(str "Ltac2 judgement push_named_assum: " ++ Id.print id ++ str " not free.")))
   else
     let idr = Context.make_annot id r in
-    let named = EConstr.push_named_context_val (LocalAssum (idr,t)) named in
-    return named
+    let named = EConstr.push_named_context_val (LocalAssum (idr,t)) ctx.named in
+    return { named; rel = ctx.rel }
 
 let () =
   define "unsafe_push_named_assum" (ctx @-> ident @-> constr @-> relevance @-> tac ctx) @@ fun ctx id t r ->
   push_named_assum_tac ctx id t (ERelevance.make r)
 
-(* NB if we add a rel context to [ctx], we must check that no rels appear in the type. *)
 let () = define "push_named_assum" (ident @-> typej @-> tac ctx) @@ fun id j ->
-  push_named_assum_tac j.ctx id j.term (ESorts.relevance_of_sort j.typ)
-
-let push_named_def_tac named id c t r =
-  if Id.Map.mem id named.Environ.env_named_map then
+  Proofview.tclEVARMAP >>= fun sigma ->
+  if not (CList.is_empty j.ctx.rel.env_rel_ctx) && not (Vars.closed0 sigma j.term) then
+    (* is_empty test is a fast path, incorrect with unsafe terms but good enough in the safe case *)
     Tac2core.throw
       (err_invalid_arg
-         (Some Pp.(str "Ltac2 judgement push_named_assum: " ++ Id.print id ++ str " not free.")))
+         (Some Pp.(str "Ltac2 judgement push_named_assum: non closed type.")))
+  else
+    push_named_assum_tac j.ctx id j.term (ESorts.relevance_of_sort j.typ)
+
+let push_named_def_tac ctx id c t r =
+  Proofview.tclEVARMAP >>= fun sigma ->
+  if Id.Map.mem id ctx.named.env_named_map then
+    Tac2core.throw
+      (err_invalid_arg
+         (Some Pp.(str "Ltac2 judgement push_named_def: " ++ Id.print id ++ str " not free.")))
   else
     let idr = Context.make_annot id r in
-    let named = EConstr.push_named_context_val (LocalDef (idr,c,t)) named in
-    return named
+    let named = EConstr.push_named_context_val (LocalDef (idr,c,t)) ctx.named in
+    return { named; rel = ctx.rel }
 
 let () = define "unsafe_push_named_def" (ctx @-> ident @-> constr @-> constr @-> relevance @-> tac ctx) @@ fun ctx id c t r ->
   push_named_def_tac ctx id c t (ERelevance.make r)
 
 let () = define "push_named_def" (ident @-> termj @-> tac ctx) @@ fun id j ->
   pf_apply_in j.ctx @@ fun env sigma ->
-  push_named_def_tac j.ctx id j.term j.typ (Retyping.relevance_of_term env sigma j.term)
+  if not (CList.is_empty j.ctx.rel.env_rel_ctx) &&
+     (not (Vars.closed0 sigma j.typ) || not (Vars.closed0 sigma j.term)) then
+    (* is_empty test is a fast path, incorrect with unsafe terms but good enough in the safe case *)
+    Tac2core.throw
+      (err_invalid_arg
+         (Some Pp.(str "Ltac2 judgement push_named_def: non closed argument.")))
+  else
+    push_named_def_tac j.ctx id j.term j.typ (Retyping.relevance_of_term env sigma j.term)
 
 let () = define "pretype_judge" (pretype_flags @-> ctx @-> preterm @-> tac termj) @@ fun flags ctx c ->
   pf_apply_in ~catch_exceptions:true ctx @@ fun env sigma ->
@@ -298,7 +317,7 @@ let () = define "sort_of_product" (sort @-> sort @-> eret sort) @@ fun s1 s2 env
   ESorts.make @@ Typeops.sort_of_product env (f s1) (f s2)
 
 let () = define "message_of_ctx" (ctx @-> tac pp) @@ fun ctx ->
-  pf_apply_in ctx @@ fun env sigma -> return (Printer.pr_named_context env sigma ctx.env_named_ctx)
+  pf_apply_in ctx @@ fun env sigma -> return (Printer.pr_context_of env sigma)
 
 let () = define "message_of_constr_in_ctx" (ctx @-> constr @-> tac pp) @@ fun ctx c ->
   pf_apply_in ctx @@ fun env sigma -> return (Printer.pr_econstr_env env sigma c)
